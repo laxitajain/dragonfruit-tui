@@ -1,0 +1,36 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.1
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: [ --fix, --exit-non-zero-on-fix ]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - click
+          - duckdb>=1.0.0
+          - shandy-sqlfmt[jinjafmt]
+          - textual>=0.89.1
+          - textual-textarea>=0.15.0
+          - textual-fastdatatable>=0.11.0
+          - pytest
+          - types-pygments
+          - rich-click>=1.7.1
+          - questionary
+          - tomlkit
+          - pandas-stubs
+          - importlib_metadata
+          - boto3-stubs
+        args:
+          - "--disallow-untyped-calls"
+          - "--disallow-untyped-defs"
+          - "--disallow-incomplete-defs"
+          - "--strict-optional"
+          - "--warn-return-any"
+          - "--warn-no-return"
+          - "--warn-redundant-casts"
+          - "--no-warn-unused-ignores"
+          - "--allow-untyped-decorators"

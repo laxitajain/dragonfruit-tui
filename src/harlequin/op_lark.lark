@@ -1,0 +1,117 @@
+// Entry
+start: command
+
+// --- Command Dispatch ---
+command: select_command
+       | aggregation_command
+       | join_command
+       | subquery_command
+
+// --- Helper Tokens ---
+action: "show" | "display" | "get" | "find" | "list" | "give"
+FILLER: /[A-Za-z]+/
+filler: FILLER
+filler_seq: filler (filler)*        // one or more fillers; use filler_seq? when optional
+
+// --- SELECT COMMANDS ---
+select_command: action filler_seq? select_core
+
+// unified select_core (explicit alternatives; both share filler_seq? prefix)
+select_core: filler_seq? table_clause select_suffix?
+           | filler_seq? columns_clause "from" filler_seq? table select_suffix?
+
+table_clause: table
+columns_clause: columns
+
+select_suffix: where_clause
+             | with_clause
+             | order_clause
+             | group_clause
+             | group_order_clause
+             | join_clause
+
+where_clause: filler_seq? "where" filler_seq? condition
+with_clause: filler_seq? "with" filler_seq? condition
+order_clause: filler_seq? "ordered" filler_seq? "by" filler_seq? column filler_seq? order?
+
+group_clause: filler_seq? "grouped" filler_seq? "by" filler_seq? column (having_clause)?
+group_order_clause: filler_seq? "grouped" filler_seq? "by" filler_seq? column filler_seq? "ordered" filler_seq? "by" filler_seq? column filler_seq? order?
+
+having_clause: "having" filler_seq? condition
+
+join_clause: filler_seq? "join" filler_seq? table filler_seq? "on" filler_seq? join_condition
+
+// --- AGGREGATION COMMANDS ---
+aggregation_command: ("count" filler_seq? "all" filler_seq? "from" filler_seq? table)                    -> count_all
+                   | ("count" filler_seq? "distinct" filler_seq? column filler_seq? "from" filler_seq? table) -> count_distinct
+                   | (("how" filler_seq? "many") | ("count" filler_seq? "how" filler_seq? "many")) filler_seq? table -> count_all
+                   | (("sum" | "total") filler_seq? column filler_seq? "from" filler_seq? table)         -> sum_column
+                   | (("average" | "mean") filler_seq? column filler_seq? "from" filler_seq? table)      -> avg_column
+                   | (("max" | "maximum") filler_seq? column filler_seq? "from" filler_seq? table)       -> max_column
+                   | (("min" | "minimum") filler_seq? column filler_seq? "from" filler_seq? table)       -> min_column
+
+// --- JOIN COMMANDS ---
+join_command: action filler_seq? table filler_seq? join_type filler_seq? "join" filler_seq? table filler_seq? "on" filler_seq? join_condition -> select_join
+
+// --- SUBQUERY COMMANDS ---
+subquery_command: action filler_seq? table filler_seq? "where" filler_seq? column filler_seq? "in" filler_seq? "(" filler_seq? subquery filler_seq? ")" -> select_with_subquery
+
+// --- CONDITIONS ---
+// Precedence: NOT > AND > OR
+?condition: or_condition
+or_condition: and_condition
+            | or_condition filler_seq? "or" filler_seq? and_condition   -> or_condition
+and_condition: not_condition
+             | and_condition filler_seq? "and" filler_seq? not_condition -> and_condition
+not_condition: "not" filler_seq? simple_condition                      -> not_condition
+              | simple_condition
+
+simple_condition: column filler_seq? OP filler_seq? value
+                | column filler_seq? "exists" filler_seq? "(" filler_seq? subquery filler_seq? ")"    -> exists_condition
+                | column filler_seq? "not" filler_seq? "exists" filler_seq? "(" filler_seq? subquery filler_seq? ")" -> not_exists_condition
+                | natural_condition
+                | "(" filler_seq? condition filler_seq? ")"
+
+// --- NATURAL CONDITIONS ---
+natural_condition: column filler_seq? natural_op filler_seq? value
+                 | column filler_seq? "is" filler_seq? natural_op filler_seq? value
+                 | column filler_seq? "is" filler_seq? "not" filler_seq? natural_op filler_seq? value
+                 | column filler_seq? "is" filler_seq? "null"                            -> natural_is_null
+                 | column filler_seq? "is" filler_seq? "not" filler_seq? "null"          -> natural_is_not_null
+                 | column filler_seq? "is" filler_seq? "like" filler_seq? STRING         -> natural_like
+                 | column filler_seq? "is" filler_seq? "not" filler_seq? "like" filler_seq? STRING -> natural_not_like
+                 | column filler_seq? "is" filler_seq? "in" filler_seq? "(" filler_seq? values filler_seq? ")" -> natural_in
+                 | column filler_seq? "is" filler_seq? "not" filler_seq? "in" filler_seq? "(" filler_seq? values filler_seq? ")" -> natural_not_in
+                 | column filler_seq? "is" filler_seq? "between" filler_seq? value filler_seq? "and" filler_seq? value -> natural_between
+                 | column filler_seq? "is" filler_seq? "not" filler_seq? "between" filler_seq? value filler_seq? "and" filler_seq? value -> natural_not_between
+
+// --- Clean disjoint natural_op (no overlaps) ---
+natural_op: "greater" filler_seq? "than"                             -> natural_greater_than
+           | "less" filler_seq? "than"                               -> natural_less_than
+           | "equal" filler_seq? "to"                                -> natural_equal_to
+           | "greater" filler_seq? "than" filler_seq? "or" filler_seq? "equal" filler_seq? "to" -> natural_greater_equal
+           | "less" filler_seq? "than" filler_seq? "or" filler_seq? "equal" filler_seq? "to"    -> natural_less_equal
+           | "not" filler_seq? "equal" filler_seq? "to"              -> natural_not_equal_to
+
+// --- Operators & Values ---
+OP: "=" | "!=" | "<>" | ">" | "<" | ">=" | "<=" | "~" | "!~"
+value: NUMBER | STRING | "null" | "true" | "false" | "NULL" | "TRUE" | "FALSE"
+values: value (filler_seq? "," filler_seq? value)*
+
+join_type: "inner" | "left" | "right" | "full" | "outer" | "cross"
+order: "ascending" | "asc" | "descending" | "desc"
+
+// --- Basic Elements ---
+columns: column (filler_seq? "," filler_seq? column)*
+table: CNAME
+column: CNAME
+join_condition: column filler_seq? "=" filler_seq? column
+subquery: command
+
+// --- Strings and Lexing ---
+STRING: /"[^"]*"/ | /'[^']*'/
+%import common.CNAME
+%import common.NUMBER
+%import common.WS
+%ignore WS
+%ignore /[.,?;!]/

@@ -1,0 +1,2 @@
+recursive-include src/harlequin *.lark *.tcss *.json *.svg *.db
+recursive-include src/dragonfruit *.lark *.tcss *.json *.svg
