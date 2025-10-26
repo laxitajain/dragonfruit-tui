@@ -1,0 +1,126 @@
+start: command
+
+// Enhanced command patterns with more natural language variations
+command: select_commands
+       | aggregation_commands
+       | join_commands
+       | subquery_commands
+
+action: "show" | "display" | "get" | "find" | "list" | "give"
+
+// Basic SELECT operations with multiple natural language patterns
+select_commands: action? "all"? table  |                                 -> select_all
+               | action? "all"? columns "from" table                           -> select_columns
+               | action? "all"? table "where" condition                       -> select_where
+               | action? "all"? table "with" condition                         -> select_with
+               | action? "all"? table "where" natural_condition                -> select_where_natural
+               | action? "all"? table "ordered" "by" column order? -> select_order
+               | action? "all"? table "in" order "order" "of" column? -> select_order
+               | action? "all"? table "grouped" "by" column                  -> select_group
+               | action? "all"? table "grouped" "by" column "having" condition -> select_group_having
+               | action? "all"? table "grouped" "by" column "ordered" "by" column order? -> select_group_order
+               | action? "all"? table "grouped" "by" column "in" order "order"? -> select_group_order
+               | action? "all"? table "join" table "on" join_condition                   -> select_join_simple
+
+// Aggregation functions with natural language
+aggregation_commands: "count" "all" "from" table                      -> count_all
+                   | "count" "distinct" column "from" table           -> count_distinct
+                   | "count" "how" "many" table                       -> count_all
+                   | "how" "many" table                               -> count_all
+                   | "sum" column "from" table                        -> sum_column
+                   | "total" column "from" table                      -> sum_column
+                   | "average" column "from" table                    -> avg_column
+                   | "mean" column "from" table                       -> avg_column
+                   | "max" column "from" table                        -> max_column
+                   | "maximum" column "from" table                    -> max_column
+                   | "min" column "from" table                         -> min_column
+                   | "minimum" column "from" table                    -> min_column
+
+// Enhanced JOIN operations
+join_commands: action? table join_type "join" table "on" join_condition -> select_join
+             
+
+// Subquery support
+subquery_commands: "show" table "where" column "in" "(" subquery ")"    -> select_with_subquery
+                 | "find" table "where" column "in" "(" subquery ")"   -> select_with_subquery
+                 | "get" table "where" column "in" "(" subquery ")"    -> select_with_subquery
+
+// Enhanced condition parsing with logical operators
+condition: simple_condition
+         | condition "and" condition                                  -> and_condition
+         | condition "or" condition                                   -> or_condition
+         | "not" condition                                            -> not_condition
+         | "(" condition ")"                                          -> paren_condition
+
+// Natural language conditions (more human-like)
+natural_condition: column "is" "greater" "than" value                 -> natural_greater_than
+                 | column "is" "less" "than" value                   -> natural_less_than
+                 | column "is" "equal" "to" value                    -> natural_equal_to
+                 | column "is" "not" "equal" "to" value              -> natural_not_equal_to
+                 | column "is" "greater" "than" "or" "equal" "to" value -> natural_greater_equal
+                 | column "is" "less" "than" "or" "equal" "to" value -> natural_less_equal
+                 | column "is" "like" STRING                         -> natural_like
+                 | column "is" "not" "like" STRING                   -> natural_not_like
+                 | column "is" "in" "(" values ")"                   -> natural_in
+                 | column "is" "not" "in" "(" values ")"             -> natural_not_in
+                 | column "is" "between" value "and" value           -> natural_between
+                 | column "is" "not" "between" value "and" value     -> natural_not_between
+                 | column "is" "null"                                 -> natural_is_null
+                 | column "is" "not" "null"                          -> natural_is_not_null
+                 | column "greater" "than" value                     -> natural_greater_than
+                 | column "less" "than" value                        -> natural_less_than
+                 | column "equal" "to" value                         -> natural_equal_to
+                 | column "not" "equal" "to" value                   -> natural_not_equal_to
+                 | column "greater" "than" "or" "equal" "to" value   -> natural_greater_equal
+                 | column "less" "than" "or" "equal" "to" value     -> natural_less_equal
+                 | column "like" STRING                              -> natural_like
+                 | column "not" "like" STRING                        -> natural_not_like
+                 | column "in" "(" values ")"                        -> natural_in
+                 | column "not" "in" "(" values ")"                 -> natural_not_in
+                 | column "between" value "and" value               -> natural_between
+                 | column "not" "between" value "and" value          -> natural_not_between
+                 | column "null"                                      -> natural_is_null
+                 | column "not" "null"                              -> natural_is_not_null
+                 | natural_condition "and" natural_condition          -> natural_and_condition
+                 | natural_condition "or" natural_condition           -> natural_or_condition
+                 | "not" natural_condition                            -> natural_not_condition
+                 | "(" natural_condition ")"                       -> natural_paren_condition
+
+simple_condition: column OP value
+                | column "exists" "(" subquery ")"                    -> exists_condition
+                | column "not" "exists" "(" subquery ")"              -> not_exists_condition
+
+// Enhanced operators
+OP: "=" | "!=" | "<>" | ">" | "<" | ">=" | "<=" | "~" | "!~"
+
+// Value types
+value: NUMBER | STRING | "null" | "true" | "false" | "NULL" | "TRUE" | "FALSE"
+
+// Multiple values
+values: value ("," value)*
+
+// Join types
+join_type: "inner" | "left" | "right" | "full" | "outer" | "cross"
+
+// Ordering
+order: "ascending" | "asc" | "descending" | "desc"
+
+// Basic elements
+columns: column ("," column)*
+table: CNAME
+column: CNAME
+join_condition: column "=" column
+subquery: command
+FILLER: /[A-Za-z]+/
+filler: FILLER
+
+
+// String definition - support both single and double quotes
+STRING: /"[^"]*"/ | /'[^']*'/
+
+// Imports
+%import common.CNAME
+%import common.NUMBER
+%import common.WS
+%ignore WS
+

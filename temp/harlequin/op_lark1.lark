@@ -1,0 +1,148 @@
+// ==========================================
+// Natural Language → SQL Grammar (priority-safe)
+// ==========================================
+
+// --- Global settings ---
+%import common.CNAME
+%import common.NUMBER
+%import common.WS
+%ignore WS
+%ignore /[.,?;!]/
+
+
+// ==========================================
+// Entry & Command Types
+// ==========================================
+start: filler* command filler*
+
+command: select_commands
+       | aggregation_commands
+       | join_commands
+       | subquery_commands
+
+
+// ==========================================
+// Common Actions & Fillers
+// ==========================================
+action: "show" | "display" | "get" | "find" | "list" | "give"
+
+
+// ==========================================
+// SELECT COMMANDS
+// ==========================================
+select_commands: action filler* "all"? filler* table                                    -> select_all
+               | action filler* "all"? filler* columns filler* "from" filler* table     -> select_columns
+               | action filler* "all"? filler* table filler* "where" filler* condition  -> select_where
+               | action filler* "all"? filler* table filler* "with" filler* condition   -> select_with
+               | action filler* "all"? filler* table filler* "where" filler* natural_condition -> select_where_natural
+               | action filler* "all"? filler* table filler* "with" filler* natural_condition  -> select_where_natural
+               | ( "show" | "list" | "get" | "find" ) filler* "all"? filler* table filler* "ordered" filler* "by" filler* column filler* order? -> select_order
+               | "show" filler* "all"? filler* table filler* "grouped" filler* "by" filler* column -> select_group
+               | "show" filler* "all"? filler* table filler* "grouped" filler* "by" filler* column filler* "having" filler* condition -> select_group_having
+               | "show" filler* "all"? filler* table filler* "grouped" filler* "by" filler* column filler* "ordered" filler* "by" filler* column filler* order? -> select_group_order
+               | "show" filler* "all"? filler* table filler* "join" filler* table filler* "on" filler* join_condition -> select_join_simple
+
+
+// ==========================================
+// AGGREGATION COMMANDS
+// ==========================================
+aggregation_commands: "count" filler* "all" filler* "from" filler* table                      -> count_all
+                    | "count" filler* "distinct" filler* column filler* "from" filler* table   -> count_distinct
+                    | "count" filler* "how" filler* "many" filler* table                       -> count_all
+                    | "how" filler* "many" filler* table                                       -> count_all
+                    | "sum" filler* column filler* "from" filler* table                        -> sum_column
+                    | "total" filler* column filler* "from" filler* table                      -> sum_column
+                    | "average" filler* column filler* "from" filler* table                    -> avg_column
+                    | "mean" filler* column filler* "from" filler* table                       -> avg_column
+                    | "max" filler* column filler* "from" filler* table                        -> max_column
+                    | "maximum" filler* column filler* "from" filler* table                    -> max_column
+                    | "min" filler* column filler* "from" filler* table                        -> min_column
+                    | "minimum" filler* column filler* "from" filler* table                    -> min_column
+
+
+// ==========================================
+// JOIN COMMANDS
+// ==========================================
+join_commands: action filler* table filler* join_type filler* "join" filler* table filler* "on" filler* join_condition -> select_join
+
+
+// ==========================================
+// SUBQUERY COMMANDS
+// ==========================================
+subquery_commands: action filler* table filler* "where" filler* column filler* "in" filler* "(" filler* subquery filler* ")" -> select_with_subquery
+
+
+// ==========================================
+// CONDITIONS
+// ==========================================
+condition: simple_condition
+         | condition filler* "and" filler* condition -> and_condition
+         | condition filler* "or" filler* condition  -> or_condition
+         | "not" filler* condition                   -> not_condition
+         | "(" filler* condition filler* ")"         -> paren_condition
+
+simple_condition: column filler* OP filler* value
+                | column filler* "exists" filler* "(" filler* subquery filler* ")"             -> exists_condition
+                | column filler* "not" filler* "exists" filler* "(" filler* subquery filler* ")" -> not_exists_condition
+
+
+// ==========================================
+// NATURAL LANGUAGE CONDITIONS
+// ==========================================
+natural_condition: column filler* "is" filler* "greater" filler* "than" filler* value                 -> natural_greater_than
+                 | column filler* "is" filler* "less" filler* "than" filler* value                   -> natural_less_than
+                 | column filler* "is" filler* "equal" filler* "to" filler* value                    -> natural_equal_to
+                 | column filler* "is" filler* "not" filler* "equal" filler* "to" filler* value      -> natural_not_equal_to
+                 | column filler* "greater" filler* "than" filler* value                             -> natural_greater_than
+                 | column filler* "less" filler* "than" filler* value                                -> natural_less_than
+                 | column filler* "equal" filler* "to" filler* value                                 -> natural_equal_to
+                 | column filler* "not" filler* "equal" filler* "to" filler* value                   -> natural_not_equal_to
+                 | column filler* "like" filler* STRING                                              -> natural_like
+                 | column filler* "not" filler* "like" filler* STRING                                -> natural_not_like
+                 | column filler* "in" filler* "(" filler* values filler* ")"                        -> natural_in
+                 | column filler* "not" filler* "in" filler* "(" filler* values filler* ")"           -> natural_not_in
+                 | column filler* "between" filler* value filler* "and" filler* value                -> natural_between
+                 | column filler* "not" filler* "between" filler* value filler* "and" filler* value   -> natural_not_between
+                 | column filler* "null"                                                            -> natural_is_null
+                 | column filler* "not" filler* "null"                                              -> natural_is_not_null
+                 | natural_condition filler* "and" filler* natural_condition                         -> natural_and_condition
+                 | natural_condition filler* "or" filler* natural_condition                          -> natural_or_condition
+                 | "not" filler* natural_condition                                                  -> natural_not_condition
+                 | "(" filler* natural_condition filler* ")"                                        -> natural_paren_condition
+
+
+// ==========================================
+// Operators, Joins, and Ordering
+// ==========================================
+OP: "=" | "!=" | "<>" | ">" | "<" | ">=" | "<=" | "~" | "!~"
+join_type: "inner" | "left" | "right" | "full" | "outer" | "cross"
+order: "ascending" | "asc" | "descending" | "desc"
+
+
+// ==========================================
+// Values, Tables, Columns
+// ==========================================
+value: NUMBER | STRING | "null" | "true" | "false" | "NULL" | "TRUE" | "FALSE"
+values: value (filler* "," filler* value)*
+
+// --- Placeholders for dynamic injection ---
+// These will be replaced at runtime by your Python code, e.g.:
+//   table: "users" | "orders"
+//   column: "id" | "email" | "name"
+columns: column (filler* "," filler* column)*
+table: CNAME
+column: CNAME
+join_condition: column filler* "=" filler* column
+subquery: command
+
+
+// ==========================================
+// String literals
+// ==========================================
+STRING: /"[^"]*"/ | /'[^']*'/
+
+// ==========================================
+// Filler words — lowest priority
+// ==========================================
+FILLER: /[A-Za-z]+/
+filler: FILLER

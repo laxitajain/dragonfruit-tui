@@ -1,0 +1,9 @@
+[console_scripts]
+dragonfruit = dragonfruit.__main__:main
+
+[harlequin.adapter]
+duckdb = harlequin_duckdb:DuckDbAdapter
+sqlite = harlequin_sqlite:HarlequinSqliteAdapter
+
+[harlequin.keymap]
+vscode = harlequin_vscode:VSCODE

@@ -1,0 +1,2 @@
+﻿from harlequin_duckdb.adapter import DuckDbAdapter as DuckDbAdapter
+from harlequin_duckdb.cli_options import DUCKDB_OPTIONS as DUCKDB_OPTIONS

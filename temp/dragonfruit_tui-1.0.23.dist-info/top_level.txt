@@ -1,0 +1,5 @@
+dragonfruit
+harlequin
+harlequin_duckdb
+harlequin_sqlite
+harlequin_vscode

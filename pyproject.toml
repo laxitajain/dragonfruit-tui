@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dragonfruit-tui"
-version = "1.0.23"
+version = "1.0.24"
 description = "A Natural Language to SQL TUI IDE for your terminal."
 readme = "README.md"
 authors = [{ name = "Laxita Jain", email = "laxitajain912@gmail.com" }]
