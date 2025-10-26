@@ -7,7 +7,7 @@
 
 The Natural Language to SQL IDE for Your Terminal.
 
-![Dragonfruit](./dragonfruit.svg)
+![Dragonfruit](./dragonfruiticon.png)
 
 > [!TIP]
 > This README contains a small subset of the documentation for Dragonfruit-TUI.  
